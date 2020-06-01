@@ -12,6 +12,7 @@
     "core-js": "^3.6.4",
     "quasar": "^1.0.0",
     "vue": "^2.6.11",
+    "vue-amap": "^0.5.10",
     "vue-router": "^3.1.6",
     "vuex": "^3.1.3"
   },
@@ -41,7 +42,11 @@
     "parserOptions": {
       "parser": "babel-eslint"
     },
-    "rules": {}
+    "rules": {},
+    "globals":{
+        "AMap": true, 
+        "AMapUI": false
+    }
   },
   "browserslist": [
     "> 1%",
