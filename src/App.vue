@@ -35,11 +35,24 @@
                                 multiple
                                 emit-value
                                 map-options
+                                use-input
+                                input-debounce="200"
+                                option-value="posData"
+                                option-label="shop_name"
                                 v-model="destination"
                                 :options="destinationOptions"
                                 label="目的地"
                                 class="fit"
-                            />
+                                @filter = "desFilter"
+                            >
+                            <template v-slot:no-option>
+                                <q-item>
+                                    <q-item-section class="text-grey">
+                                    无结果
+                                    </q-item-section>
+                                </q-item>
+                            </template> 
+                            </q-select>
                         </q-item>
 
                         <q-item class="justify-center">
@@ -122,8 +135,17 @@
 <script>
 import { AMapManager, lazyAMapApiLoaderInstance } from "vue-amap";
 // import AMap from 'vue-amap';
-
+import { getDistance_SD, getDesList } from './api/index'
+// import { getDesList } from './common/index'
+// import { getDesList, Permutation, combo } from './common/index'
 let amapManager = new AMapManager();
+
+
+/**
+ * 核心为：对路径求出最短路径再使用高德渲染
+ * 最短路径：对途径点排列 求两两间距离，对途径点全排序求出最短路径
+ * 可使用最短路径算法
+ */
 export default {
     data() {
         let self = this;
@@ -134,7 +156,8 @@ export default {
             events: {
                 init: o => {
                     // console.log(o.getCenter());
-                    // console.log(this.$refs.map.$$getInstance());
+                    // console.log
+                    (this.$refs.map.$$getInstance());
                     localStorage.removeItem("_AMap_raster");
                     o.getCity(result => {
                         console.log(result);
@@ -165,12 +188,13 @@ export default {
             drawer: true,
             drawerRight: false,
 
-            startPoint: "",
+            startPoint: [117.209189, 31.718411],
             destination: [],
             routes: [],
             routesRes: '大无畏大无畏大无畏，大无畏大无畏，大无畏大无畏大无畏大无畏，大无畏大无畏大无畏',
             distance: 0,
-            time: ""
+            time: "",
+            destinationOptions:[],
         };
     },
 
@@ -183,36 +207,83 @@ export default {
                 }
             ];
         },
-        destinationOptions() {
-            return [
-                {
-                    label: "招商局1",
-                    value: [117.209189, 31.718411]
-                },
-                {
-                    label: "招商局2",
-                    value: [117.20918, 31.718411]
-                },
-                {
-                    label: "招商局3",
-                    value: [117.20912, 31.718411]
-                },
-                {
-                    label: "招商局4",
-                    value: [117.203912, 31.718411]
-                }
-            ];
-        }
+        // destinationOptions() {
+        //     return [
+        //         {
+        //             label: "招商局1",
+        //             value: [117.209189, 31.718411]
+        //         },
+        //         {
+        //             label: "招商局2",
+        //             value: [117.20918, 31.718411]
+        //         },
+        //         {
+        //             label: "招商局3",
+        //             value: [117.20912, 31.718411]
+        //         },
+        //         {
+        //             label: "招商局4",
+        //             value: [117.203912, 31.718411]
+        //         }
+        //     ];
+        // }
     },
 
     mounted() {
         // console.log(AMap())
+        this.getDesList();
     },
 
     methods: {
         search() {
             console.log(this.startPoint);
             console.log(this.destination);
+        },
+
+        getDesList(filter) { // 获取门店列表
+            let params = {
+                    page_size:1000,
+                    page_num:1,
+                    keyword:filter||''
+            }
+            getDesList(params).then(res => {
+                // console.log(res)
+                if(res.data.success) {
+                    let data = [];
+                    if(res.data.data && res.data.data.length>0){
+                        res.data.data.forEach(element => {
+                        element.posData = [element.longitude, element.latitude];
+                        data.push(element);
+                        });
+                        this.destinationOptions = Object.freeze(data);
+                    }else{
+                        this.destinationOptions=null;
+                        // console.log('sdasda')
+                        // Array.length
+                    }
+                    
+                }
+            })
+        },
+        desFilter(val, update) {
+            // let selt = this;
+            let data = val;
+            if(!data) {
+                this.getDesList();
+            }else{
+                this.getDesList(data);
+
+            }
+
+            setTimeout(() => {
+                update(() => {
+                    this.getDesList(data);
+                })
+            }, 1000)
+
+            
+            
+            
         },
         createMap() {
             let o = amapManager.getMap();
@@ -245,6 +316,15 @@ export default {
             //     debugger;
             //     //得到的数据
             // });
+        },
+
+        // 计算两点距离
+        getDistance_SD(ori, dis) {
+            getDistance_SD(ori, dis).then(res => {
+                console.log(res)
+            }).catch(ex => {
+                console.log(ex)
+            })
         }
     }
 };
