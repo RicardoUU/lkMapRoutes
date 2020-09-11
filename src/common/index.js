@@ -1,4 +1,7 @@
 // 全排序
+/**
+ * @param {array} arr 
+ */
 export class Permutation {
     constructor(arr) {
         this.arr = Array.from(arr);
@@ -20,15 +23,19 @@ export class Permutation {
         }
     }
 }
-// 排列
+/**
+ * 
+ * @param {array} arr 
+ * @param {int} num 
+ */
 export function combo(arr, num) {
-    var result = [];
-    var range = function (r, _arr) {
+    let result = [];
+    let range = function (r, _arr) {
         if (r.length == num) {
             result.push(r)
         } else {
             let l = r.length;
-            for (var i = 0, len = _arr.length - num + l; i <= len; i++) {
+            for (let i = 0, len = _arr.length - num + l; i <= len; i++) {
                 range(r.concat(_arr[i]), _arr.slice(i + 1))
             }
         }
