@@ -4,7 +4,9 @@ import router from './router'
 import store from './store'
 import './quasar'
 import VueAMap from 'vue-amap';
-
+// import Antd from 'ant-design-vue';
+// import 'ant-design-vue/dist/antd.css';
+// Vue.use(Antd);
 Vue.config.productionTip = false
 
 VueAMap.initAMapApiLoader({

@@ -1,7 +1,7 @@
 <template>
     <div class>
         <q-layout view="hHh LpR fFf" style="height: 90vh" class="shadow-2 rounded-borders">
-            <q-footer bordered class="bg-white text-primary">
+            <q-footer elevated class="bg-white text-primary">
                 <q-toolbar>
                     <q-btn flat @click="drawer = !drawer" round dense icon="search" />
 
@@ -10,7 +10,7 @@
                 </q-toolbar>
             </q-footer>
 
-            <q-drawer v-model="drawer" show-if-above :width="300">
+            <q-drawer v-model="drawer" overlay :breakpoint="500" :width="300">
                 <q-scroll-area
                     style="height: calc(100% - 150px); margin-top: 150px; border-right: 1px solid #ddd"
                 >
@@ -35,6 +35,7 @@
                                 emit-value
                                 map-options
                                 use-input
+                                max-values='16'
                                 input-debounce="200"
                                 option-value="posData"
                                 option-label="shop_name"
@@ -43,17 +44,39 @@
                                 label="目的地"
                                 class="fit"
                                 @filter="desFilter"
+                                transition-show="scale"
+                                transition-hide="scale"
+                                ref="destRef"
                             >
-                            <template v-slot:no-option>
-                                <q-item>
-                                    <q-item-section class="text-grey">
-                                    无结果
-                                    </q-item-section>
-                                </q-item>
-                            </template> 
+                                <template v-slot:no-option>
+                                    <!-- <q-item>
+                                        <q-input @input='shopsFilter' autofocus label="门店名称" v-model="filterValue" class="fit"/> 
+                                    </q-item> -->
+                                    <q-item>
+                                        <q-item-section class="text-grey">
+                                        无结果
+                                        </q-item-section>
+                                    </q-item>
+                                </template>
+                                <template v-slot:option="scope">
+                                    <!-- <q-item
+                                        v-if="scope.index===0"
+                                    >
+                                        <q-input @input='shopsFilter' label="门店名称" v-model="filterValue" class="fit"/>
+                                    </q-item> -->
+                                    <q-item
+                                        v-bind="scope.itemProps"
+                                        v-on="scope.itemEvents"
+                                    >
+    
+                                        <q-item-section>
+                                            <q-item-label v-html="scope.opt.shop_name" />
+                    
+                                        </q-item-section>
+                                    </q-item>
+                                </template>
                             </q-select>
                         </q-item>
-
                         <q-item class="justify-center">
                             <q-btn color="white" text-color="black" label="查询路线" @click="search">
                                 <q-inner-loading :showing="loading">
@@ -105,10 +128,10 @@
                 side="right"
                 v-model="drawerRight"
                 bordered
-                show-if-above
                 :width="300"
-         
                 content-class="bg-grey-3"
+                overlay
+                :breakpoint="500"
             >
                 <q-scroll-area class="fit">
                     <div id="routeResult"></div>
@@ -197,7 +220,7 @@ export default {
             ],
             drawer: true,
             drawerRight: false,
-
+            filterValue:'',
             startPoint: {longitude:117.209189, latitude:31.718411, key:'origin'},
             destination: [],
             routes: [],
@@ -261,7 +284,7 @@ export default {
         async search() {
             this.loading = true;
             this.comboDistance = {}
-            if(this.destination.length<1) {
+            if(!this.destination  || this.destination.length<1) {
                 this.loading = false;
                 return;
             }
@@ -321,12 +344,27 @@ export default {
                 this.getDesList(data);
 
             }
-
             setTimeout(() => {
                 update(() => {
                     this.getDesList(data);
+                },
+                ref => {
+                    if (val !== '' && ref.options.length > 0 && ref.optionIndex === -1) {
+                        ref.moveOptionSelection(1, true) // focus the first selectable option and do not update the input-value
+                        ref.toggleOption(ref.options[ref.optionIndex], true) // toggle the focused option
+                    }
                 })
             }, 1000)   
+        },
+        shopsFilter(val) {
+            // let selt = this;
+            let data = val;
+            if(!data) {
+                this.getDesList();
+            }else{
+                this.getDesList(data);
+
+            }
         },
         createMap() {
 
