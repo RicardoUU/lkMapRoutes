@@ -153,6 +153,8 @@ let drivingObj = '';
  * 核心为：对路径求出最短路径再使用高德渲染
  * 最短路径：对途径点排列 求两两间距离，对途径点全排序求出最短路径
  * 可使用最短路径算法
+ * 
+ * @param <get url> url参数 route=1,2,3   门店 shop_num  逗号隔开
  */
 export default {
     data() {
