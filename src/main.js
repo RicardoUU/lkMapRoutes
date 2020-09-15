@@ -10,7 +10,7 @@ import VueAMap from 'vue-amap';
 Vue.config.productionTip = false
 
 VueAMap.initAMapApiLoader({
-    key: '47be8e6664c78cfdbc3a8172cbcb1106',
+    key: 'ee1c92b84f6183e95149bff5139072b3',
     // key: '1b4d55465f98f3302bf7ac47d8edc721',
     plugin: ['AMap.Autocomplete', 'AMap.PlaceSearch', 'AMap.Scale', 'AMap.OverView', 'AMap.ToolBar', 'AMap.MapType', 'AMap.PolyEditor', 'AMap.CircleEditor', 'AMap.Geocoder', "AMap.Geolocation","AMap.TruckDriving"],
     // v: '1.4.15',

@@ -34,7 +34,7 @@
                                 multiple
                                 emit-value
                                 map-options
-                                use-input
+                                use-chips
                                 max-values='16'
                                 input-debounce="200"
                                 option-value="posData"
@@ -49,30 +49,29 @@
                                 ref="destRef"
                             >
                                 <template v-slot:no-option>
-                                    <!-- <q-item>
-                                        <q-input @input='shopsFilter' autofocus label="门店名称" v-model="filterValue" class="fit"/> 
-                                    </q-item> -->
+                                    <q-item>
+                                        <!-- <q-input debounce="1000" autofocus label="门店名称" v-model="filterValue" class="fit"/>  -->
+                                        <q-input  autofocus label="门店名称" v-model="filterValue" class="fit">
+                                            <template v-slot:append>
+                                                <!-- <q-icon name="search" /> -->
+                                                <q-btn flat round color="primary" icon="search" @click="shopsFilter"/>
+                                            </template>
+                                        </q-input>
+                                    </q-item>
                                     <q-item>
                                         <q-item-section class="text-grey">
                                         无结果
                                         </q-item-section>
                                     </q-item>
                                 </template>
-                                <template v-slot:option="scope">
-                                    <!-- <q-item
-                                        v-if="scope.index===0"
-                                    >
-                                        <q-input @input='shopsFilter' label="门店名称" v-model="filterValue" class="fit"/>
-                                    </q-item> -->
-                                    <q-item
-                                        v-bind="scope.itemProps"
-                                        v-on="scope.itemEvents"
-                                    >
-    
-                                        <q-item-section>
-                                            <q-item-label v-html="scope.opt.shop_name" />
-                    
-                                        </q-item-section>
+                                <template v-slot:before-options>
+                                    <q-item>
+                                        <q-input label="门店名称" v-model="filterValue" class="fit">
+                                            <template v-slot:append>
+                                                <!-- <q-icon name="search" /> -->
+                                                <q-btn round flat size="small" color="primary" icon="search" @click="shopsFilter"/>
+                                            </template>
+                                        </q-input>
                                     </q-item>
                                 </template>
                             </q-select>
@@ -337,9 +336,12 @@ export default {
         },
         desFilter(val, update) {
             // let selt = this;
+            
             let data = val;
             if(!data) {
                 this.getDesList();
+                // this.$refs.destRef.moveOptionSelection(1, true)
+                // this.$refs.destRef.toggleOption(this.$refs.destRef.options[this.$refs.destRef.optionIndex], true)
             }else{
                 this.getDesList(data);
 
@@ -348,23 +350,30 @@ export default {
                 update(() => {
                     this.getDesList(data);
                 },
-                ref => {
-                    if (val !== '' && ref.options.length > 0 && ref.optionIndex === -1) {
-                        ref.moveOptionSelection(1, true) // focus the first selectable option and do not update the input-value
-                        ref.toggleOption(ref.options[ref.optionIndex], true) // toggle the focused option
-                    }
-                })
+                // ref => {
+                //     if (val !== '' && ref.options.length > 0 && ref.optionIndex === -1) {
+                //         // ref.moveOptionSelection(1, true) // focus the first selectable option and do not update the input-value
+                //         // ref.toggleOption(ref.options[ref.optionIndex], true) // toggle the focused option
+                //     }
+                // }
+                )
             }, 1000)   
         },
-        shopsFilter(val) {
+        shopsFilter() {
             // let selt = this;
-            let data = val;
-            if(!data) {
-                this.getDesList();
-            }else{
-                this.getDesList(data);
 
-            }
+            this.$refs.destRef.filter(this.filterValue)
+
+            // let data = val;
+            // console.log(data)
+            // if(!data) {
+            //     this.getDesList();
+            // }else{
+            //     // const needle = data.toLowerCase()
+            //     // let res = this.destinationOptions.filter(v => v.shop_name.toLowerCase().indexOf(needle) > -1);
+            //     // this.destinationOptions = Object.freeze(res);
+            //     console.log(this.$refs.destRef.filter)
+            // }
         },
         createMap() {
 
