@@ -4,13 +4,10 @@ import router from './router'
 import store from './store'
 import './quasar'
 import VueAMap from 'vue-amap';
-// import Antd from 'ant-design-vue';
-// import 'ant-design-vue/dist/antd.css';
-// Vue.use(Antd);
 Vue.config.productionTip = false
 
 VueAMap.initAMapApiLoader({
-    key: '1b4d55465f98f3302bf7ac47d8edc721',
+    key: '676423a4566870e46fc99bce762bfd48',
     plugin: ['AMap.Autocomplete', 'AMap.PlaceSearch', 'AMap.Scale', 'AMap.OverView', 'AMap.ToolBar', 'AMap.MapType', 'AMap.PolyEditor', 'AMap.CircleEditor', 'AMap.Geocoder', "AMap.Geolocation","AMap.TruckDriving"],
     // v: '1.4.15',
     v: '1.4.15',

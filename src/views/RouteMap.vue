@@ -1,6 +1,16 @@
 <template>
     <div class>
         <q-layout view="hHh LpR fFf" style="height: 90vh" class="shadow-2 rounded-borders">
+            <q-header bordered class="bg-white text-primary">
+                <q-toolbar>
+                <q-toolbar-title class="text-center">
+                    <q-avatar>
+                    <img src="../assets/logo1.png">
+                    </q-avatar>
+                        智能路线规划
+                </q-toolbar-title>
+                </q-toolbar>
+            </q-header>
             <q-footer elevated class="bg-white text-primary">
                 <q-toolbar>
                     <q-btn flat @click="drawer = !drawer" round dense icon="search" />
@@ -12,7 +22,7 @@
 
             <q-drawer v-model="drawer" overlay :breakpoint="500" :width="300">
                 <q-scroll-area
-                    style="height: calc(100% - 150px); margin-top: 150px; border-right: 1px solid #ddd"
+                    style="height: calc(100% - 150px);border-right: 1px solid #ddd"
                 >
                     <q-list padding>
                         <q-item>
@@ -108,19 +118,19 @@
                     </q-list>
                 </q-scroll-area>
 
-                <q-img
+                <!-- <q-img
                     class="absolute-top"
                     :src="require('../assets/material.png')"
                     style="height: 150px"
                 >
                     <div class="absolute-bottom bg-transparent">
                         <q-avatar size="56px" class="q-mb-sm">
-                            <img src="../assets/logo.jpg" />
+                            <img src="../assets/logo1.png" />
                         </q-avatar>
                         <div class="text-weight-bold">智能路径规划</div>
                         <div>ASA DATA LTD</div>
                     </div>
-                </q-img>
+                </q-img> -->
             </q-drawer>
 
             <q-drawer
@@ -187,8 +197,6 @@ export default {
             center: [117.209189, 31.718411],
             events: {
                 init: o => {
-                    // console.log(o.getCenter());
-                    // console.log
                     (this.$refs.map.$$getInstance());
                     localStorage.removeItem("_AMap_raster");
                     o.getCity(result => {
@@ -234,7 +242,8 @@ export default {
             },
             oriToFirstDestDist:{},
             drivingObj: '',
-            loading:false
+            loading:false,
+            count:1
         };
     },
 
@@ -283,32 +292,37 @@ export default {
         async search() {
             this.loading = true;
             this.comboDistance = {}
+            this.resetModel();
             if(!this.destination  || this.destination.length<1) {
                 this.loading = false;
                 return;
             }
             let comboList = combo(this.destination,2);
             try{
+                /**
+                 * 可优化为异步请求 除去await 
+                 * ps：弄不明白 0v0
+                 */
                 for(let cindex = 0;cindex<comboList.length;cindex++) {
                     await this.getDistance_SD(comboList[cindex][0],comboList[cindex][1]);
                     continue;
                 }
-            // console.log(this.comboDistance);
+                console.log(this.comboDistance)
                 await this.getMinDistanceRoutes();
-                this.loading = false;
             }catch(err){
                 this.loading = false;
             }
-            
 
-            // console.log(res);
         },
 
         async getDesList(filter) { // 获取门店列表
+            /**
+             * quasar列表是虚拟dom 动态渲染  100w条也不会卡 直接请求全部的数据就行
+             */
             let params = {
-                    page_size:100000,
-                    page_num:1,
-                    keyword:filter||''
+                page_size:100000,
+                page_num:1,
+                keyword:filter||''
             }
             await getDesList(params).then(res => {
                 // console.log(res)
@@ -327,8 +341,6 @@ export default {
                         this.destinationOptions = Object.freeze(data);
                     }else{
                         this.destinationOptions=null;
-                        // console.log('sdasda')
-                        // Array.length
                     }
                     
                 }
@@ -350,30 +362,11 @@ export default {
                 update(() => {
                     this.getDesList(data);
                 },
-                // ref => {
-                //     if (val !== '' && ref.options.length > 0 && ref.optionIndex === -1) {
-                //         // ref.moveOptionSelection(1, true) // focus the first selectable option and do not update the input-value
-                //         // ref.toggleOption(ref.options[ref.optionIndex], true) // toggle the focused option
-                //     }
-                // }
                 )
             }, 1000)   
         },
         shopsFilter() {
-            // let selt = this;
-
             this.$refs.destRef.filter(this.filterValue)
-
-            // let data = val;
-            // console.log(data)
-            // if(!data) {
-            //     this.getDesList();
-            // }else{
-            //     // const needle = data.toLowerCase()
-            //     // let res = this.destinationOptions.filter(v => v.shop_name.toLowerCase().indexOf(needle) > -1);
-            //     // this.destinationOptions = Object.freeze(res);
-            //     console.log(this.$refs.destRef.filter)
-            // }
         },
         createMap() {
 
@@ -381,13 +374,15 @@ export default {
 
         // 计算两点距离
         async getDistance_SD(ori, dis) {
-            await getDistance_SD(ori, dis).then((res) => {
-                // 存储距离对象
-                this.comboDistance[`${ori.shop_num}-${dis.shop_num}`] =parseInt(res.data.route.paths[0].distance);
+            let res = await getDistance_SD(ori, dis);
+            // .then((res) => {
+            //     // 存储距离对象
+            //     console.log(this.count++);
+                this.comboDistance[`${ori.shop_num}-${dis.shop_num}`] = parseInt(res.data.route.paths[0].distance);
                 this.comboDistance[`${dis.shop_num}-${ori.shop_num}`] = parseInt(res.data.route.paths[0].distance);
-            }).catch(ex => {
-                console.log(ex)
-            })
+            // }).catch(ex => {
+            //     console.log(ex)
+            // })
         },
         // 获取最短路径
         async getMinDistanceRoutes() {
@@ -395,11 +390,11 @@ export default {
             let permts = new Permutation(this.destination);                                             //对路径进行全排序
             const result = permts.result;
             let firstItem = result[0]; // 第一条路径
-            let minDis = 0;
-            minDis+= this.oriToFirstDestDist[`${this.startPoint.key}-${firstItem[0].shop_num}`];        //加上起点距离
-
-            for(let findex = 0;findex<firstItem.length-1;findex++) {                                     // 第一条路径距离
-                minDis += this.comboDistance[`${firstItem[findex].shop_num}-${firstItem[findex+1].shop_num}`];
+            let minDis = 0;            // 最小距离
+            minDis += this.oriToFirstDestDist[`${this.startPoint.key}-${firstItem[0].shop_num}`];        //加上起点距离
+            for(let findex = 0;findex < firstItem.length-1;findex++) {       
+                let nextDis = this.comboDistance[`${firstItem[findex].shop_num}-${firstItem[findex+1].shop_num}`]; // 第一条路径距离
+                minDis += nextDis;
             }
 
             this.minRoutesObj.routes = firstItem;
@@ -407,23 +402,32 @@ export default {
             for(let rindex=1; rindex < result.length; rindex++) {                                      // 求全排序路径距离
                 let pitem = result[rindex];
                 let dis=0;
-                dis+= this.oriToFirstDestDist[`${this.startPoint.key}-${pitem[0].shop_num}`];          //加上起点距离
+                dis += this.oriToFirstDestDist[`${this.startPoint.key}-${pitem[0].shop_num}`];          //加上起点距离
+                /**
+                 * 可优化剪纸路径
+                 * ps：没必要
+                 */
                 for(let pindex=0; pindex < pitem.length-1; pindex++) {
-                    dis+= this.comboDistance[`${pitem[pindex].shop_num}-${pitem[pindex+1].shop_num}`];
+                    // console.log(this.comboDistance[`${pitem[pindex].shop_num}-${pitem[pindex+1].shop_num}`])
+                    let nextDis = this.comboDistance[`${pitem[pindex].shop_num}-${pitem[pindex+1].shop_num}`];
+                    dis += nextDis;
                     if(dis >= minDis){ // 剪枝
                         break;
                     }
                 }
-                if(dis <= minDis) {
+                // console.log(dis)
+                if(dis < minDis) {
                     minDis = dis;
                     this.minRoutesObj.routes = result[rindex];
+                    // console.log(this.minRoutesObj)
                 }
             }
             
 
             this.minRoutesObj.distance = minDis;
             this.paintMap(this.minRoutesObj.routes);
-            this.formaterRes()
+            this.formaterRes();
+            this.loading = false;
             // console.log(this.minRoutesObj)
             
         },
@@ -438,17 +442,18 @@ export default {
                 }
             })
         },
-        // 获取起点-全排序路径首个点的距离 
+        // 获取起点-路径首个点的距离 
         async getOriToFirstItemDis() {
             this.oriToFirstDestDist = {}
             for(let cindex = 0;cindex<this.destination.length;cindex++) {
-                await getDistance_SD(this.startPoint,this.destination[cindex]).then((res) => {
-                    // console.log(res.data)
-                    // 存储距离对象
-                    this.oriToFirstDestDist[`${this.startPoint.key}-${this.destination[cindex].shop_num}`] =parseInt(res.data.route.paths[0].distance);
-                }).catch(ex => {
-                    console.log(ex)
-                })
+                let res =  await getDistance_SD(this.startPoint,this.destination[cindex])
+                // .then((res) => {
+                //     // console.log(res.data)
+                //     // 存储距离对象
+                // }).catch(ex => {
+                //     console.log(ex)
+                // })
+                this.oriToFirstDestDist[`${this.startPoint.key}-${this.destination[cindex].shop_num}`] = parseInt(res.data.route.paths[0].distance);
                 continue;
             }
         },
@@ -457,7 +462,8 @@ export default {
             let origin = new AMap.LngLat(this.startPoint.longitude, this.startPoint.latitude);
             let destination = new AMap.LngLat(routes[routes.length-1].longitude, routes[routes.length-1].latitude);
             let opts ={};
-            opts.waypoints = routes.map(item=>{
+            let waypoints = routes.slice(0,routes.length-1);
+            opts.waypoints = waypoints.map(item=>{
                 return new AMap.LngLat(item.longitude, item.latitude);
             })
             let _this = this;
@@ -475,11 +481,16 @@ export default {
                 drivingObj = new AMap.Driving(drivingOption); //构造驾车导航类
                 //根据起终点坐标规划驾车路线
                 drivingObj.search(origin,destination,opts,function(status,result){
-                    console.log(status,result)
+                    // console.log(status,result)
                     _this.distance = (parseInt(result.routes[0].distance)/1000).toFixed(2) + '公里';
-                    _this.time = (parseInt(result.routes[0].time)/3600).toFixed(2)+ '小时';
+                    _this.time = (parseInt(result.routes[0].time)/60).toFixed(2)+ '分钟';
                 });
             });
+        },
+        resetModel() {
+            // this.routesRes = '';
+            // this.distance = 0;
+            // this.time = 0;
         }
     }
 };
