@@ -117,20 +117,6 @@
                         </q-item>
                     </q-list>
                 </q-scroll-area>
-
-                <!-- <q-img
-                    class="absolute-top"
-                    :src="require('../assets/material.png')"
-                    style="height: 150px"
-                >
-                    <div class="absolute-bottom bg-transparent">
-                        <q-avatar size="56px" class="q-mb-sm">
-                            <img src="../assets/logo1.png" />
-                        </q-avatar>
-                        <div class="text-weight-bold">智能路径规划</div>
-                        <div>ASA DATA LTD</div>
-                    </div>
-                </q-img> -->
             </q-drawer>
 
             <q-drawer
@@ -173,10 +159,7 @@
 
 <script>
 import { AMapManager, lazyAMapApiLoaderInstance } from "vue-amap";
-// import AMap from 'vue-amap';
 import { getDistance_SD, getDesList } from '@/api/index'
-// import { getDesList } from './api/index'
-// import { getDesList } from './common/index'
 import { Permutation, combo } from '@/common/index'
 let amapManager = new AMapManager();
 let drivingObj = '';
@@ -259,24 +242,24 @@ export default {
         },
 
     },
-
     async mounted() {
         await this.getDesList();
         if(this.$route.query.route) {
-            // console.log(this.$route.query.shops)
             let shops = this.$route.query.route.split(',');
-            this.destination = this.initShops(shops);
+            this.destination = await this.initShops(shops);
             this.search();
         }
     },
 
     methods: {
-        initShops(shops) {
+        // 初始化url参数门店
+        async initShops(shops) {
             let dest = [];
-            shops.forEach(sitem=>{
+            await shops.forEach(sitem=>{
                 for (let dindex = 0; dindex < this.destinationOptions.length; dindex++) {
                     const element = this.destinationOptions[dindex];
                     if(sitem===element.shop_num){
+                        console.log(element)
                         dest.push({
                             ...element
                         })

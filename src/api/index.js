@@ -1,9 +1,9 @@
 import $ajax from './ajax.js';
 
 
- // 获取两点规划距离
+ // 获取门店列表
 export function getDesList(params) {
-    let url = 'http://47.93.34.213:9001/api/web/tables/shop/list'
+    let url = 'https://asa-logi.net/api/web/tables/shop/list'
     return $ajax.post(url, params);
 }
 
