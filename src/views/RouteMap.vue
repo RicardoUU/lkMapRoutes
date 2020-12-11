@@ -45,7 +45,7 @@
                                 emit-value
                                 map-options
                                 use-chips
-                                max-values='16'
+                                max-values='100'
                                 input-debounce="200"
                                 option-value="posData"
                                 option-label="shop_name"
@@ -135,19 +135,25 @@
 
             <q-page-container>
                 <q-page class="row">
-                    <!-- <el-amap class="amap-box col-12" :amap-manager="amapManager" :vid="'amap-vue'"></el-amap> -->
-                    <el-amap
-                        ref="map"
-                        vid="amapDemo"
-                        :amap-manager="amapManager"
-                        :center="center"
-                        :zoom="zoom"
-                        :plugin="plugin"
-                        :events="events"
-                        class="amap-demo col-12"
+                    <transition
+                        appear
+                        enter-active-class="animated fadeIn"
+                        leave-active-class="animated fadeOut"
                     >
-                        <el-amap-marker vid="component-marker" :position="center"></el-amap-marker>
-                    </el-amap>
+                        <el-amap
+                            ref="map"
+                            vid="amapDemo"
+                            :amap-manager="amapManager"
+                            :center="center"
+                            :zoom="zoom"
+                            :plugin="plugin"
+                            :events="events"
+                            class="amap-demo col-12"
+                            v-show="!loading"
+                        >
+                            <el-amap-marker vid="component-marker" :position="center"></el-amap-marker>
+                        </el-amap>
+                    </transition>
                     <q-inner-loading :showing="loading">
                         <q-spinner-facebook size="50px" color="primary" />
                     </q-inner-loading>
@@ -165,6 +171,8 @@ let amapManager = new AMapManager();
 let drivingObj = '';
 
 /**
+ * @description 这是个NPC问题  无终点最短路径问题，可转化为最短哈密顿路径问题
+ * 
  * 核心为：对路径求出最短路径再使用高德渲染
  * 最短路径：对途径点排列 求两两间距离，对途径点全排序求出最短路径
  * 可使用最短路径算法
@@ -292,6 +300,7 @@ export default {
                 }
                 console.log(this.comboDistance)
                 await this.getMinDistanceRoutes();
+                // await this.getMiniRoutes_greedy();
             }catch(err){
                 this.loading = false;
             }
@@ -331,12 +340,9 @@ export default {
         },
         desFilter(val, update) {
             // let selt = this;
-            
             let data = val;
             if(!data) {
                 this.getDesList();
-                // this.$refs.destRef.moveOptionSelection(1, true)
-                // this.$refs.destRef.toggleOption(this.$refs.destRef.options[this.$refs.destRef.optionIndex], true)
             }else{
                 this.getDesList(data);
 
@@ -358,20 +364,17 @@ export default {
         // 计算两点距离
         async getDistance_SD(ori, dis) {
             let res = await getDistance_SD(ori, dis);
-            // .then((res) => {
-            //     // 存储距离对象
-            //     console.log(this.count++);
-                this.comboDistance[`${ori.shop_num}-${dis.shop_num}`] = parseInt(res.data.route.paths[0].distance);
-                this.comboDistance[`${dis.shop_num}-${ori.shop_num}`] = parseInt(res.data.route.paths[0].distance);
-            // }).catch(ex => {
-            //     console.log(ex)
-            // })
+            this.comboDistance[`${ori.shop_num}-${dis.shop_num}`] = parseInt(res.data.route.paths[0].distance);
+            this.comboDistance[`${dis.shop_num}-${ori.shop_num}`] = parseInt(res.data.route.paths[0].distance);
+            res = null;
         },
-        // 获取最短路径
+        // 获取最短路径 -- 全排序
         async getMinDistanceRoutes() {
             await this.getOriToFirstItemDis();
             let permts = new Permutation(this.destination);                                             //对路径进行全排序
-            const result = permts.result;
+            await permts.run(0);
+            let result = permts.result;
+            console.log(result);
             let firstItem = result[0]; // 第一条路径
             let minDis = 0;            // 最小距离
             minDis += this.oriToFirstDestDist[`${this.startPoint.key}-${firstItem[0].shop_num}`];        //加上起点距离
@@ -388,10 +391,8 @@ export default {
                 dis += this.oriToFirstDestDist[`${this.startPoint.key}-${pitem[0].shop_num}`];          //加上起点距离
                 /**
                  * 可优化剪纸路径
-                 * ps：没必要
                  */
                 for(let pindex=0; pindex < pitem.length-1; pindex++) {
-                    // console.log(this.comboDistance[`${pitem[pindex].shop_num}-${pitem[pindex+1].shop_num}`])
                     let nextDis = this.comboDistance[`${pitem[pindex].shop_num}-${pitem[pindex+1].shop_num}`];
                     dis += nextDis;
                     if(dis >= minDis){ // 剪枝
@@ -411,10 +412,62 @@ export default {
             this.paintMap(this.minRoutesObj.routes);
             this.formaterRes();
             this.loading = false;
-            // console.log(this.minRoutesObj)
+            result = null;
             
         },
 
+        // 贪心策略
+        async getMiniRoutes_greedy() {
+            this.loading = false;
+            await this.getOriToFirstItemDis();
+
+            const initDistanceMap = {...this.oriToFirstDestDist,...this.comboDistance};
+            const minRoutes = [...this.initMinRoutes()];
+
+            for(let dindex = 1; dindex < this.destination.length; dindex++) {
+                const lastMinRoute = minRoutes[minRoutes.length-1];                                               // 获取选择点的最后一个
+                const tampDestination = [...this.destination].filter(dItem=> {                                    // 获取未选中最小路径内的点
+                    return !minRoutes.some(minRouteItem=>minRouteItem.shop_num === dItem.shop_num);
+                });
+
+                let tampDis = initDistanceMap[`${lastMinRoute.shop_num}-${tampDestination[0].shop_num}`]; 
+                let tampRoute = tampDestination[0];
+
+                // 获取下一次前往最近的点
+                for(let tampIndex = 1; tampIndex < tampDestination.length; tampIndex++) {
+                    const elementDis = initDistanceMap[`${lastMinRoute.shop_num}-${tampDestination[tampIndex].shop_num}`];
+                    if(elementDis < tampDis) {
+                        tampDis = elementDis;
+                        tampRoute = tampDestination[tampIndex];
+                    }
+                }
+                minRoutes.push(tampRoute);
+                // console.log(initDistanceMap)
+                // console.log(tampDestination)
+                // console.log(tampDis)
+                console.log(minRoutes)
+                
+
+            }
+            this.sliceRoutesPaint(minRoutes);
+            
+
+        },
+
+        initMinRoutes() { // 初始化最小路径数组-- 起点-第一个点
+            let minDis = this.oriToFirstDestDist[`${this.startPoint.key}-${this.destination[0].shop_num}`];
+            let routes = [this.destination[0]];
+            
+            for(let dindex=1; dindex < this.destination.length; dindex++) {
+                const tampDis = this.oriToFirstDestDist[`${this.startPoint.key}-${this.destination[dindex].shop_num}`];
+                if(tampDis < minDis) {
+                    minDis = tampDis;
+                    routes[0] = this.destination[dindex];
+                }
+            }
+            return [this.startPoint,...routes];
+        },
+        // 格式化输出结果
         formaterRes() {
             this.routesRes = '招商局→'
             this.minRoutesObj.routes.forEach((ritem,rindex)=>{
@@ -430,17 +483,84 @@ export default {
             this.oriToFirstDestDist = {}
             for(let cindex = 0;cindex<this.destination.length;cindex++) {
                 let res =  await getDistance_SD(this.startPoint,this.destination[cindex])
-                // .then((res) => {
-                //     // console.log(res.data)
-                //     // 存储距离对象
-                // }).catch(ex => {
-                //     console.log(ex)
-                // })
                 this.oriToFirstDestDist[`${this.startPoint.key}-${this.destination[cindex].shop_num}`] = parseInt(res.data.route.paths[0].distance);
+                res = null;
                 continue;
             }
         },
-        // 绘制地图路径
+        // 规划结果路径转化为path
+        parseRouteToPath(route) {
+            var path = []
+            for (var i = 0, l = route.steps.length; i < l; i++) {
+                var step = route.steps[i]
+
+                for (var j = 0, n = step.path.length; j < n; j++) {
+                    path.push(step.path[j])
+                }
+            }
+            return path
+        },
+        // 自定义绘制
+        drawRoute (result,map) {
+            let path = this.parseRouteToPath(result.routes[0])
+            let startMarker = new AMap.Marker({
+                position: result.start.location,
+                icon: 'https://webapi.amap.com/theme/v1.3/markers/n/start.png',
+                map: map
+            })
+
+            let endMarker = new AMap.Marker({
+                position: result.end.location,
+                icon: 'https://webapi.amap.com/theme/v1.3/markers/n/end.png',
+                map: map
+            })
+            let routeLine = new AMap.Polyline({
+                path: path,
+                isOutline: true,
+                outlineColor: '#ffeeee',
+                borderWeight: 2,
+                strokeWeight: 5,
+                strokeColor: '#0091ff',
+                lineJoin: 'round'
+            })
+            routeLine.setMap(map)
+            // 调整视野达到最佳显示区域
+            map.setFitView([ startMarker, endMarker ,routeLine]);
+            (new AMap.DrivingRender()).autoRender({
+                data: result,
+                map: map,
+                panel: "routeResult",
+                hideMarkers:true,
+            });
+        },
+        // 途径大于16个点分段绘制
+        async sliceRoutesPaint(routes) {
+            if(drivingObj) {
+                drivingObj.clear();
+            }
+            console.log(routes)
+            const sliceNum = Math.ceil(routes.length/16);
+            let resultList = [];
+            for(let index=0; index < sliceNum; index++) {
+                // this.paintMap
+                let route = [];
+                if(index !== sliceNum-1 ){
+                    route = routes.slice(index*16,index*16 + 16);
+                }else{
+                    route = routes.slice(index*16,routes.length);
+                }
+                const result = await this.drivingForCallback(route);
+                resultList.push(result);
+            }
+
+            console.log(resultList);
+
+            // this.formaterRes();
+            // this.loading = false;
+
+            // const 
+        },
+        // 绘制地图路径--- 全排序
         paintMap(routes) {
             let origin = new AMap.LngLat(this.startPoint.longitude, this.startPoint.latitude);
             let destination = new AMap.LngLat(routes[routes.length-1].longitude, routes[routes.length-1].latitude);
@@ -450,13 +570,14 @@ export default {
                 return new AMap.LngLat(item.longitude, item.latitude);
             })
             let _this = this;
-            AMap.plugin(["AMap.Driving"], function() {
+            AMap.plugin(["AMap.Driving"], async function() {
                 let drivingOption = {
                     // policy:AMap.DrivingPolicy.LEAST_TIME,
                     // policy:AMap.DrivingPolicy.LEAST_DISTANCE,
                     policy:10,
                     map:amapManager.getMap(),
-                    panel: "routeResult"
+                    panel: "routeResult",
+                    // hideMarkers: true
                 };
                 if(drivingObj) {
                     drivingObj.clear();
@@ -464,11 +585,61 @@ export default {
                 drivingObj = new AMap.Driving(drivingOption); //构造驾车导航类
                 //根据起终点坐标规划驾车路线
                 drivingObj.search(origin,destination,opts,function(status,result){
-                    // console.log(status,result)
-                    _this.distance = (parseInt(result.routes[0].distance)/1000).toFixed(2) + '公里';
-                    _this.time = (parseInt(result.routes[0].time)/60).toFixed(2)+ '分钟';
+                    console.log(status,result)
+                    if (status === 'complete') {
+                        if (result.routes && result.routes.length) {
+                            // 绘制第一条路线，也可以按需求绘制其它几条路线
+                            _this.distance = (parseInt(result.routes[0].distance)/1000).toFixed(2) + '公里';
+                            _this.time = (parseInt(result.routes[0].time)/60).toFixed(2)+ '分钟';
+                            // 自定义渲染路线结果
+                        }
+                    } else {
+                        console.error('获取驾车数据失败：' + result)
+                    }
+                    
                 });
             });
+        },
+        // 跟据routes 返回规划结果
+        async drivingForCallback(routes) {
+            let origin = new AMap.LngLat(routes[0].longitude, routes[0].latitude);
+            let destination = new AMap.LngLat(routes[routes.length-1].longitude, routes[routes.length-1].latitude);
+            let opts ={};
+            let waypoints = routes.slice(1,routes.length-1);
+            opts.waypoints = waypoints.map(item=>{
+                return new AMap.LngLat(item.longitude, item.latitude);
+            })
+            // let _this = this;
+            return new Promise(function(resolve, reject) {
+                // 异步处理
+                // 处理结束后、调用resolve 或 reject
+                AMap.plugin(["AMap.Driving"], function() {
+                    let drivingOption = {
+                        // policy:AMap.DrivingPolicy.LEAST_TIME,
+                        // policy:AMap.DrivingPolicy.LEAST_DISTANCE,
+                        policy:10,
+                        map:amapManager.getMap(),
+                        // hideMarkers: true
+                    };
+                    if(drivingObj) {
+                        // drivingObj.clear();
+                    }
+                    drivingObj = new AMap.Driving(drivingOption); //构造驾车导航类
+                    //根据起终点坐标规划驾车路线
+                    drivingObj.search(origin, destination, opts, (status,result)=>{
+                        if (status === 'complete') {
+                            resolve(result)
+                        } else {
+                            reject(result);
+                            console.error('获取驾车数据失败：' + result)
+                        }
+                    });
+                });
+            });
+        },
+
+        handleResults() {
+            
         },
         resetModel() {
             // this.routesRes = '';

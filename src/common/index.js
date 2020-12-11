@@ -1,3 +1,4 @@
+
 // 全排序
 /**
  * @param {array} arr 
@@ -7,10 +8,9 @@ export class Permutation {
         this.arr = Array.from(arr);
         this.result = [];
         this.len = 0;
-        this.run(0);
     }
 
-    run(index) {
+    async run(index) {
         if (index == this.arr.length - 1) {
             this.result.push(Array.from(this.arr));
             this.len++;
@@ -22,7 +22,16 @@ export class Permutation {
             [this.arr[index], this.arr[i]] = [this.arr[i], this.arr[index]];
         }
     }
+
 }
+
+
+// function trampoline(f) {
+//     while (f && f instanceof Function) {
+//         f = f();
+//     }
+//     return f;
+// }
 /**
  * 
  * @param {array} arr 
