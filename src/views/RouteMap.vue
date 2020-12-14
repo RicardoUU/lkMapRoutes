@@ -20,9 +20,9 @@
                 </q-toolbar>
             </q-footer>
 
-            <q-drawer v-model="drawer" overlay :breakpoint="500" :width="300">
+            <q-drawer v-model="drawer" overlay :breakpoint="600" :width="300">
                 <q-scroll-area
-                    style="height: calc(100% - 150px);border-right: 1px solid #ddd"
+                    style="height: calc(100% - 50px);border-right: 1px solid #ddd"
                 >
                     <q-list padding>
                         <q-item>
@@ -168,7 +168,7 @@ import { AMapManager, lazyAMapApiLoaderInstance } from "vue-amap";
 import { getDistance_SD, getDesList } from '@/api/index'
 import { Permutation, combo } from '@/common/index'
 let amapManager = new AMapManager();
-let drivingObj = '';
+let drivingObjList = [];
 
 /**
  * @description 这是个NPC问题  无终点最短路径问题，可转化为最短哈密顿路径问题
@@ -294,13 +294,15 @@ export default {
                  * 可优化为异步请求 除去await 
                  * ps：弄不明白 0v0
                  */
+                let asyncList = []
                 for(let cindex = 0;cindex<comboList.length;cindex++) {
-                    await this.getDistance_SD(comboList[cindex][0],comboList[cindex][1]);
-                    continue;
+                    asyncList.push(this.getDistance_SD(comboList[cindex][0],comboList[cindex][1])); // 全异步请求
+                    // await this.getDistance_SD(comboList[cindex][0],comboList[cindex][1]);
+                    // continue;
                 }
+                await Promise.all(asyncList);
                 if(this.destination && this.destination.length>9) { // 贪心
                     await this.getMiniRoutes_greedy();
-
                 }else{ // 全排序
                     await this.getMinDistanceRoutes();
                 }
@@ -480,12 +482,21 @@ export default {
         // 获取起点-路径首个点的距离 
         async getOriToFirstItemDis() {
             this.oriToFirstDestDist = {}
+            let asyncList = [];
             for(let cindex = 0;cindex<this.destination.length;cindex++) {
-                let res =  await getDistance_SD(this.startPoint,this.destination[cindex])
-                this.oriToFirstDestDist[`${this.startPoint.key}-${this.destination[cindex].shop_num}`] = parseInt(res.data.route.paths[0].distance);
-                res = null;
-                continue;
+                // let res =  await getDistance_SD(this.startPoint,this.destination[cindex])
+                // this.oriToFirstDestDist[`${this.startPoint.key}-${this.destination[cindex].shop_num}`] = parseInt(res.data.route.paths[0].distance);
+                // res = null;
+                // continue;
+                asyncList.push(this.setOriginToFirstPointDis(cindex)); // 异步list
             }
+            await Promise.all(asyncList);
+        },
+
+        async setOriginToFirstPointDis(cindex) {
+            let res =  await getDistance_SD(this.startPoint,this.destination[cindex]);
+            this.oriToFirstDestDist[`${this.startPoint.key}-${this.destination[cindex].shop_num}`] = parseInt(res.data.route.paths[0].distance);
+            res = null;
         },
         // 规划结果路径转化为path
         parseRouteToPath(route) {
@@ -534,10 +545,10 @@ export default {
         },
         // 途径大于16个点分段绘制
         async sliceRoutesPaint(routes) {
-            if(drivingObj) {
-                drivingObj.clear();
+            if(drivingObjList && drivingObjList.length) {
+                amapManager.getMap().clearMap();
             }
-            console.log(routes)
+            // console.log(routes)
             const sliceNum = Math.ceil(routes.length/16);
             let resultList = [];
             // 大于16个点时 分组渲染
@@ -550,7 +561,7 @@ export default {
                 }else{
                     route = routes.slice(startIndex,routes.length);
                 }
-                const result = await this.drivingForCallback(route);
+                const result = await this.drivingForCallback(route,index);
                 resultList.push(result);
             }
             // 组规划结果
@@ -568,6 +579,9 @@ export default {
                 return new AMap.LngLat(item.longitude, item.latitude);
             })
             let _this = this;
+            if(drivingObjList && drivingObjList.length) {
+                amapManager.getMap().clearMap();
+            }
             AMap.plugin(["AMap.Driving"], async function() {
                 let drivingOption = {
                     // policy:AMap.DrivingPolicy.LEAST_TIME,
@@ -577,12 +591,10 @@ export default {
                     panel: "routeResult",
                     // hideMarkers: true
                 };
-                if(drivingObj) {
-                    drivingObj.clear();
-                }
-                drivingObj = new AMap.Driving(drivingOption); //构造驾车导航类
+
+                drivingObjList[0] = new AMap.Driving(drivingOption); //构造驾车导航类
                 //根据起终点坐标规划驾车路线
-                drivingObj.search(origin,destination,opts,function(status,result){
+                drivingObjList[0].search(origin,destination,opts,function(status,result){
                     // console.log(status,result)
                     if (status === 'complete') {
                         if (result.routes && result.routes.length) {
@@ -598,7 +610,7 @@ export default {
             });
         },
         // 跟据routes 返回规划结果
-        async drivingForCallback(routes) {
+        async drivingForCallback(routes,routeIndex) {
             let origin = new AMap.LngLat(routes[0].longitude, routes[0].latitude);
             let destination = new AMap.LngLat(routes[routes.length-1].longitude, routes[routes.length-1].latitude);
             let opts ={};
@@ -617,12 +629,9 @@ export default {
                         map:amapManager.getMap(),
                         hideMarkers: true
                     };
-                    if(drivingObj) {
-                        // drivingObj.clear();
-                    }
-                    drivingObj = new AMap.Driving(drivingOption); //构造驾车导航类
+                    drivingObjList[routeIndex] = new AMap.Driving(drivingOption); //构造驾车导航类
                     //根据起终点坐标规划驾车路线
-                    drivingObj.search(origin, destination, opts, (status,result)=>{
+                    drivingObjList[routeIndex].search(origin, destination, opts, (status,result)=>{
                         if (status === 'complete') {
                             resolve(result)
                         } else {
