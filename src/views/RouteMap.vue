@@ -129,7 +129,7 @@
                 :breakpoint="500"
             >
                 <q-scroll-area class="fit">
-                    <div id="routeResult"></div>
+                    <div ref="routeResult" id="routeResult"></div>
                 </q-scroll-area>
             </q-drawer>
 
@@ -545,9 +545,7 @@ export default {
         },
         // 途径大于16个点分段绘制
         async sliceRoutesPaint(routes) {
-            if(drivingObjList && drivingObjList.length) {
-                amapManager.getMap().clearMap();
-            }
+            this.clearMap();
             // console.log(routes)
             const sliceNum = Math.ceil(routes.length/16);
             let resultList = [];
@@ -579,9 +577,7 @@ export default {
                 return new AMap.LngLat(item.longitude, item.latitude);
             })
             let _this = this;
-            if(drivingObjList && drivingObjList.length) {
-                amapManager.getMap().clearMap();
-            }
+            this.clearMap();
             AMap.plugin(["AMap.Driving"], async function() {
                 let drivingOption = {
                     // policy:AMap.DrivingPolicy.LEAST_TIME,
@@ -690,6 +686,16 @@ export default {
             result.waypoints = waypoints;
             result.routes = routes;
             return result;
+        },
+
+        clearMap() {
+            if(drivingObjList && drivingObjList.length) {
+                amapManager.getMap().clearMap();
+                drivingObjList.forEach((_,index)=> {
+                    drivingObjList[index].clear();
+                })
+                this.$refs.routeResult.html = '';
+            }
         },
         resetModel() {
             // this.routesRes = '';
