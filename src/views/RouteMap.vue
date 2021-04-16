@@ -1,33 +1,60 @@
 <template>
     <div class>
-        <q-layout view="hHh LpR fFf" style="height: 90vh" class="shadow-2 rounded-borders">
-            <q-header bordered class="bg-white text-primary">
+        <q-layout
+            view="hHh LpR fFf"
+            style="height: 90vh"
+            class="shadow-2 rounded-borders"
+        >
+            <q-header
+                bordered
+                class="bg-white text-primary"
+            >
                 <q-toolbar>
-                <q-toolbar-title class="text-center">
-                    <q-avatar>
-                    <img src="../assets/logo1.png">
-                    </q-avatar>
+                    <q-toolbar-title class="text-center">
+                        <q-avatar>
+                            <img src="../assets/logo1.png">
+                        </q-avatar>
                         智能路线规划
-                </q-toolbar-title>
+                    </q-toolbar-title>
                 </q-toolbar>
             </q-header>
-            <q-footer elevated class="bg-white text-primary">
+            <q-footer
+                elevated
+                class="bg-white text-primary"
+            >
                 <q-toolbar>
-                    <q-btn flat @click="drawer = !drawer" round dense icon="search" />
+                    <q-btn
+                        flat
+                        @click="drawer = !drawer"
+                        round
+                        dense
+                        icon="search"
+                    />
 
-                    <q-toolbar-title class="cursor-pointer" @click="drawer = !drawer">路线规划</q-toolbar-title>
-                    <q-btn flat @click="drawerRight = !drawerRight" round dense icon="directions" />
+                    <q-toolbar-title
+                        class="cursor-pointer"
+                        @click="drawer = !drawer"
+                    >路线规划</q-toolbar-title>
+                    <q-btn
+                        flat
+                        @click="drawerRight = !drawerRight"
+                        round
+                        dense
+                        icon="directions"
+                    />
                 </q-toolbar>
             </q-footer>
 
-            <q-drawer v-model="drawer" overlay :breakpoint="600" :width="300">
-                <q-scroll-area
-                    style="height: calc(100% - 50px);border-right: 1px solid #ddd"
-                >
+            <q-drawer
+                v-model="drawer"
+                overlay
+                :breakpoint="600"
+                :width="300"
+            >
+                <q-scroll-area style="height: calc(100% - 50px);border-right: 1px solid #ddd">
                     <q-list padding>
                         <q-item>
                             <q-select
-                                
                                 clearable
                                 emit-value
                                 map-options
@@ -61,25 +88,47 @@
                                 <template v-slot:no-option>
                                     <q-item>
                                         <!-- <q-input debounce="1000" autofocus label="门店名称" v-model="filterValue" class="fit"/>  -->
-                                        <q-input  autofocus label="门店名称" v-model="filterValue" class="fit">
+                                        <q-input
+                                            autofocus
+                                            label="门店名称"
+                                            v-model="filterValue"
+                                            class="fit"
+                                        >
                                             <template v-slot:append>
                                                 <!-- <q-icon name="search" /> -->
-                                                <q-btn flat round color="primary" icon="search" @click="shopsFilter"/>
+                                                <q-btn
+                                                    flat
+                                                    round
+                                                    color="primary"
+                                                    icon="search"
+                                                    @click="shopsFilter"
+                                                />
                                             </template>
                                         </q-input>
                                     </q-item>
                                     <q-item>
                                         <q-item-section class="text-grey">
-                                        无结果
+                                            无结果
                                         </q-item-section>
                                     </q-item>
                                 </template>
                                 <template v-slot:before-options>
                                     <q-item>
-                                        <q-input label="门店名称" v-model="filterValue" class="fit">
+                                        <q-input
+                                            label="门店名称"
+                                            v-model="filterValue"
+                                            class="fit"
+                                        >
                                             <template v-slot:append>
                                                 <!-- <q-icon name="search" /> -->
-                                                <q-btn round flat size="small" color="primary" icon="search" @click="shopsFilter"/>
+                                                <q-btn
+                                                    round
+                                                    flat
+                                                    size="small"
+                                                    color="primary"
+                                                    icon="search"
+                                                    @click="shopsFilter"
+                                                />
                                             </template>
                                         </q-input>
                                     </q-item>
@@ -100,29 +149,46 @@
                         </q-item>
 
                         <q-item class="justify-center">
-                            <q-btn color="white" text-color="black" label="查询路线" @click="search">
+                            <q-btn
+                                color="white"
+                                text-color="black"
+                                label="查询路线"
+                                @click="search"
+                            >
                                 <q-inner-loading :showing="loading">
-                                    <q-spinner-facebook size="20px" color="primary" />
+                                    <q-spinner-facebook
+                                        size="20px"
+                                        color="primary"
+                                    />
                                 </q-inner-loading>
                             </q-btn>
-                            
+
                         </q-item>
 
-                        <q-item clickable v-ripple>
+                        <q-item
+                            clickable
+                            v-ripple
+                        >
                             <q-item-section>
                                 规划结果：
                                 {{routesRes}}
                             </q-item-section>
                         </q-item>
 
-                        <q-item clickable v-ripple>
+                        <q-item
+                            clickable
+                            v-ripple
+                        >
                             <q-item-section>
                                 总距离：
                                 {{distance}}
                             </q-item-section>
                         </q-item>
 
-                        <q-item clickable v-ripple>
+                        <q-item
+                            clickable
+                            v-ripple
+                        >
                             <q-item-section>
                                 全程时间：
                                 {{time}}
@@ -142,7 +208,10 @@
                 :breakpoint="500"
             >
                 <q-scroll-area class="fit">
-                    <div ref="routeResult" id="routeResult"></div>
+                    <div
+                        ref="routeResult"
+                        id="routeResult"
+                    ></div>
                 </q-scroll-area>
             </q-drawer>
 
@@ -164,14 +233,38 @@
                             class="amap-demo col-12"
                             v-show="!loading"
                         >
-                            <el-amap-marker vid="component-marker" :position="center"></el-amap-marker>
+                            <el-amap-marker
+                                vid="component-marker"
+                                :position="center"
+                            ></el-amap-marker>
                         </el-amap>
+                        
                     </transition>
+
+                    <!-- 悬浮按钮 -->
+                    <!-- <q-page-sticky position="bottom-left" :offset="fabPos">
+                        <q-fab
+                        icon="add"
+                        direction="up"
+                        color="accent"
+                        :disable="draggingFab"
+                        v-touch-pan.prevent.mouse="moveFab"
+                        >
+                        <q-fab-action @click="drawer = !drawer" color="primary" icon="search" :disable="draggingFab" />
+                        <q-fab-action @click="drawerRight = !drawerRight" color="primary" icon="directions" :disable="draggingFab" />
+                        </q-fab>
+                    </q-page-sticky> -->
                     <q-inner-loading :showing="loading">
-                        <q-spinner-facebook size="50px" color="primary" />
+                        <q-spinner-facebook
+                            size="50px"
+                            color="primary"
+                        />
                     </q-inner-loading>
+                    
                 </q-page>
+                
             </q-page-container>
+
         </q-layout>
     </div>
 </template>
@@ -229,7 +322,7 @@ export default {
                     }
                 }
             ],
-            drawer: true,
+            drawer: false,
             drawerRight: false,
             filterValue:'',
             startPoint: {longitude:117.209189, latitude:31.718411, key:'origin'},
@@ -250,6 +343,8 @@ export default {
             count:1,
 
             isReturn: true, // 是否计算回程即考虑回到起点
+            fabPos: [ 18, 50 ],
+            draggingFab: false,
         };
     },
 
@@ -287,6 +382,14 @@ export default {
     },
 
     methods: {
+        moveFab (ev) {
+            this.draggingFab = ev.isFirst !== true && ev.isFinal !== true
+
+            this.fabPos = [
+                this.fabPos[0] + ev.delta.x,
+                this.fabPos[1] - ev.delta.y
+            ]
+        },
         // 初始化url参数门店
         async initShops(shops) {
             let dest = [];
