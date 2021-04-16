@@ -271,7 +271,7 @@
 
 <script>
 import { AMapManager, lazyAMapApiLoaderInstance } from "vue-amap";
-import { getDistance_SD, getDesList } from '@/api/index'
+import { getDistance_SD, getDesList, getRouteByTransId } from '@/api/index'
 import { Permutation, combo } from '@/common/index'
 let amapManager = new AMapManager();
 let drivingObjList = [];
@@ -342,7 +342,7 @@ export default {
             loading:false,
             count:1,
 
-            isReturn: true, // 是否计算回程即考虑回到起点
+            isReturn: false, // 是否计算回程即考虑回到起点
             fabPos: [ 18, 50 ],
             draggingFab: false,
         };
@@ -372,10 +372,17 @@ export default {
         },
 
     },
-    async mounted() {
+    async created() {
         await this.getDesList();
-        if(this.$route.query.route) {
-            let shops = this.$route.query.route.split(',');
+        const {query} = this.$route
+        // 传入运单号
+        if(query.transOrderNum) {
+            this.getRouteByTransId(query.transOrderNum);
+            return;
+        }
+        // 传入门店id
+        if(query.route) {
+            let shops = query.route.split(',');
             this.destination = await this.initShops(shops);
             this.search();
         }
@@ -414,6 +421,7 @@ export default {
             this.loading = true;
             this.comboDistance = {}
             this.resetModel();
+            console.log(this.destination)
             if(!this.destination  || this.destination.length<1) {
                 this.loading = false;
                 return;
@@ -441,7 +449,26 @@ export default {
             }
 
         },
-
+        // 通过运单号在后端接口规划结果
+        async getRouteByTransId(transOrderNum) {
+            const res = await getRouteByTransId({transOrderNum});
+            const data = res.data;
+            if(data && data.code === 200) {
+                // 途径点
+                const waypoints = res.data.data.coordinate.map(point=>{
+                    return {
+                        latitude:point.latitude,
+                        longitude:point.longitude,
+                        shop_name:point.coordinateName,
+                        shop_num:point.shopNum,
+                    }
+                });
+                this.destination = waypoints;
+                this.minRoutesObj.routes = waypoints;
+                let routeResult = [data.data.currentCoordinate,...waypoints];
+                this.sliceRoutesPaint(routeResult,res.data.data.currentCoordinate || this.startPoint)
+            }
+        },
         async getDesList(filter) { // 获取门店列表
             /**
              * quasar列表是虚拟dom 动态渲染  100w条也不会卡 直接请求全部的数据就行
@@ -651,8 +678,8 @@ export default {
             }
             return path
         },
-        // 途径大于16个点分段绘制
-        async sliceRoutesPaint(routes) {
+        // 途径大于16个点时分段绘制
+        async sliceRoutesPaint(routes, startPoint = this.startPoint) {
             this.clearMap();
             const sliceNum = Math.ceil(routes.length/16);
             let resultList = [];
@@ -666,7 +693,7 @@ export default {
                     route = routes.slice(startIndex,routes.length);
                     // 考虑回到起点
                     if(this.isReturn) {
-                        route = [...route,this.startPoint];
+                        route = [...route,startPoint];
                     }
                 }
                 const result = await this.drivingForCallback(route,index,sliceNum);

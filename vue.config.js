@@ -21,5 +21,13 @@ module.exports = {
       .set("assets", resolve("src/assets"))
       .set("components", resolve("src/components"))
       .set("imgs", resolve("src/imgs"))
+
+    
+    config.optimization.minimizer('terser').tap((args) => {
+        const compress = args[0].terserOptions.compress;
+        // 非 App 平台移除 console 代码(包含所有 console 方法，如 log,debug,info...)
+        compress.drop_console = true;
+        return args;
+    });
   },
 }
